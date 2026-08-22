@@ -13,25 +13,35 @@
     <!-- UI -->
     <div id="ui">
       <div id="ink-meter">
-        <div id="ink-bar"></div>
+        <div id="ink-fill"></div>
       </div>
       <div id="depth">Depth 1</div>
     </div>
 
+    <!-- Mobile Controls -->
+    <div id="mobile-controls">
+      <div id="joystick-zone">
+        <div id="joystick-base">
+          <div id="joystick-knob"></div>
+        </div>
+      </div>
+      <button id="jump-btn">JUMP</button>
+    </div>
+
     <!-- Menu -->
     <div id="menu" class="screen">
-      <h1>Atrament</h1>
+      <img src="https://iili.io/CZiKQyl.md.jpg" alt="Atrament Logo" id="logo" />
       <button id="start-btn">Begin Writing</button>
     </div>
 
     <!-- Game Over -->
     <div id="gameover" class="screen hidden">
       <h2>The Page is Lost</h2>
+      <p id="final-depth">Depth reached: 1</p>
       <button id="retry-btn">Rewrite</button>
     </div>
   </div>
 
-  <!-- Scripts -->
   <script src="js/utils.js"></script>
   <script src="js/player.js"></script>
   <script src="js/ink.js"></script>
