@@ -15,7 +15,17 @@
       <div id="ink-meter">
         <div id="ink-fill"></div>
       </div>
-      <div id="depth">Depth 1</div>
+      <div id="depth-info">
+        <div id="depth">Depth 1</div>
+        <div id="best-depth">Best: 1</div>
+      </div>
+    </div>
+
+    <!-- Tutorial -->
+    <div id="tutorial" class="hidden">
+      Draw ink to create platforms<br>
+      Press <b>E</b> or <b>SERAP</b> to absorb<br>
+      Survive and reach higher Depth
     </div>
 
     <!-- Mobile Controls -->
@@ -25,19 +35,24 @@
           <div id="joystick-knob"></div>
         </div>
       </div>
-      <button id="jump-btn">JUMP</button>
+      <div id="right-buttons">
+        <button id="absorb-btn">SERAP</button>
+        <button id="jump-btn">JUMP</button>
+      </div>
     </div>
 
     <!-- Menu -->
     <div id="menu" class="screen">
       <img src="https://iili.io/CZiKQyl.md.jpg" alt="Atrament Logo" id="logo" />
       <button id="start-btn">Begin Writing</button>
+      <p class="menu-hint">Draw the path. The ink remembers.</p>
     </div>
 
     <!-- Game Over -->
     <div id="gameover" class="screen hidden">
       <h2>The Page is Lost</h2>
       <p id="final-depth">Depth reached: 1</p>
+      <p id="new-best" class="hidden">New Best Depth!</p>
       <button id="retry-btn">Rewrite</button>
     </div>
   </div>
