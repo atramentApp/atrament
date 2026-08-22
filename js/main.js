@@ -126,6 +126,7 @@ function initGame() {
 
   createStartingGround();
   document.getElementById('depth').textContent = `Depth ${depth}`;
+  document.getElementById('chapter').textContent = `Chapter ${chapter}`;
   document.getElementById('tutorial').classList.remove('hidden');
 }
 
@@ -214,7 +215,6 @@ function gameLoop() {
       const e = enemies[i];
       e.update(player, canvas.height);
       if (safeTime <= 0 && e.hits(player)) {
-        // Death effect
         playSound('death');
         triggerShake(14, 22);
         deathFlash = 18;
@@ -262,6 +262,7 @@ function gameLoop() {
       // Every 5 Depth = new Chapter
       if (depth % 5 === 1 && depth > 1) {
         chapter = Math.floor((depth - 1) / 5) + 1;
+        document.getElementById('chapter').textContent = `Chapter ${chapter}`;
         playSound('chapter');
         triggerShake(5, 10);
       }
