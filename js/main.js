@@ -1,4 +1,4 @@
-// Atrament - Main Game (Visual + Juice + Sound)
+// Atrament - Main Game (Progression + Polish + Death Effect)
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -8,16 +8,19 @@ let player;
 let inkSystem;
 let enemies = [];
 let depth = 1;
+let chapter = 1;
 let bestDepth = parseInt(localStorage.getItem('atrament_best') || '1');
 let gameTime = 0;
 let safeTime = 220;
 let tutorialTimer = 0;
 
-// Screen shake
+// Screen shake & death effect
 let shakeTime = 0;
 let shakeIntensity = 0;
+let deathFlash = 0;
+let deathParticles = [];
 
-// Audio Context
+// Audio
 let audioCtx = null;
 
 function initAudio() {
@@ -33,7 +36,6 @@ function playSound(type) {
   const gain = audioCtx.createGain();
   osc.connect(gain);
   gain.connect(audioCtx.destination);
-
   const now = audioCtx.currentTime;
 
   if (type === 'jump') {
@@ -45,7 +47,6 @@ function playSound(type) {
     osc.start(now);
     osc.stop(now + 0.13);
   }
-
   if (type === 'absorb') {
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(180, now);
@@ -55,7 +56,6 @@ function playSound(type) {
     osc.start(now);
     osc.stop(now + 0.21);
   }
-
   if (type === 'draw') {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(120 + Math.random() * 40, now);
@@ -64,17 +64,15 @@ function playSound(type) {
     osc.start(now);
     osc.stop(now + 0.07);
   }
-
   if (type === 'death') {
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(200, now);
-    osc.frequency.exponentialRampToValueAtTime(40, now + 0.4);
-    gain.gain.setValueAtTime(0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.exponentialRampToValueAtTime(35, now + 0.55);
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
     osc.start(now);
-    osc.stop(now + 0.41);
+    osc.stop(now + 0.56);
   }
-
   if (type === 'land') {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(90, now);
@@ -82,6 +80,15 @@ function playSound(type) {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
     osc.start(now);
     osc.stop(now + 0.09);
+  }
+  if (type === 'chapter') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc.start(now);
+    osc.stop(now + 0.31);
   }
 }
 
@@ -109,10 +116,13 @@ function initGame() {
   inkSystem = new InkSystem();
   enemies = [];
   depth = 1;
+  chapter = 1;
   gameTime = 0;
   safeTime = 220;
   tutorialTimer = 380;
   shakeTime = 0;
+  deathFlash = 0;
+  deathParticles = [];
 
   createStartingGround();
   document.getElementById('depth').textContent = `Depth ${depth}`;
@@ -148,6 +158,22 @@ function triggerShake(intensity = 6, duration = 12) {
   shakeTime = duration;
 }
 
+function spawnDeathParticles(x, y) {
+  for (let i = 0; i < 28; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 5;
+    deathParticles.push({
+      x: x,
+      y: y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 2,
+      life: 40 + Math.random() * 30,
+      maxLife: 70,
+      size: 2 + Math.random() * 3
+    });
+  }
+}
+
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -179,7 +205,6 @@ function gameLoop() {
     player.update(platforms);
     inkSystem.update(enemies);
 
-    // Land sound
     if (!wasOnGround && player.onGround) {
       playSound('land');
     }
@@ -189,24 +214,57 @@ function gameLoop() {
       const e = enemies[i];
       e.update(player, canvas.height);
       if (safeTime <= 0 && e.hits(player)) {
+        // Death effect
         playSound('death');
-        triggerShake(10, 18);
+        triggerShake(14, 22);
+        deathFlash = 18;
+        spawnDeathParticles(player.x + player.width / 2, player.y + player.height / 2);
         gameOver();
       }
     }
 
-    // Draw
+    // Draw world
     inkSystem.draw(ctx);
     player.draw(ctx);
     for (let e of enemies) e.draw(ctx);
+
+    // Death particles
+    for (let i = deathParticles.length - 1; i >= 0; i--) {
+      const p = deathParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.15;
+      p.life--;
+      const alpha = p.life / p.maxLife;
+      ctx.fillStyle = `rgba(20, 15, 10, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      if (p.life <= 0) deathParticles.splice(i, 1);
+    }
+
+    // Death flash
+    if (deathFlash > 0) {
+      ctx.fillStyle = `rgba(180, 40, 30, ${deathFlash / 25})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      deathFlash--;
+    }
 
     // UI
     const inkFill = document.getElementById('ink-fill');
     if (inkFill) inkFill.style.width = inkSystem.getInkPercentage() + '%';
 
+    // Progression: Depth & Chapter
     if (gameTime > 0 && gameTime % 1000 === 0) {
       depth++;
       document.getElementById('depth').textContent = `Depth ${depth}`;
+
+      // Every 5 Depth = new Chapter
+      if (depth % 5 === 1 && depth > 1) {
+        chapter = Math.floor((depth - 1) / 5) + 1;
+        playSound('chapter');
+        triggerShake(5, 10);
+      }
     }
 
     if (joystick.active) {
@@ -219,21 +277,31 @@ function gameLoop() {
 }
 
 function drawBackground() {
+  // Richer parchment atmosphere
   const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  g.addColorStop(0, '#3a2f24');
-  g.addColorStop(0.5, '#2e251c');
-  g.addColorStop(1, '#241c15');
+  g.addColorStop(0, '#3e3228');
+  g.addColorStop(0.4, '#32281f');
+  g.addColorStop(1, '#261e16');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.strokeStyle = 'rgba(90, 70, 50, 0.09)';
+  // Subtle paper grain
+  ctx.strokeStyle = 'rgba(95, 75, 55, 0.07)';
   ctx.lineWidth = 1;
-  for (let i = 0; i < canvas.height; i += 24) {
+  for (let i = 0; i < canvas.height; i += 22) {
     ctx.beginPath();
-    ctx.moveTo(0, i);
-    ctx.lineTo(canvas.width, i);
+    ctx.moveTo(0, i + Math.sin(i * 0.05) * 1.5);
+    ctx.lineTo(canvas.width, i + Math.sin(i * 0.05) * 1.5);
     ctx.stroke();
   }
+
+  // Soft ink stains in background
+  ctx.fillStyle = 'rgba(10, 8, 6, 0.04)';
+  ctx.beginPath();
+  ctx.arc(canvas.width * 0.15, canvas.height * 0.3, 90, 0, Math.PI * 2);
+  ctx.arc(canvas.width * 0.8, canvas.height * 0.7, 120, 0, Math.PI * 2);
+  ctx.arc(canvas.width * 0.5, canvas.height * 0.15, 70, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function gameOver() {
@@ -247,7 +315,7 @@ function gameOver() {
     document.getElementById('best-depth').textContent = `Best: ${bestDepth}`;
   }
 
-  document.getElementById('final-depth').textContent = `Depth reached: ${depth}`;
+  document.getElementById('final-depth').textContent = `Depth reached: ${depth}  •  Chapter ${chapter}`;
   const newBestEl = document.getElementById('new-best');
   if (isNewBest) newBestEl.classList.remove('hidden');
   else newBestEl.classList.add('hidden');
@@ -293,7 +361,7 @@ window.addEventListener('keyup', (e) => {
   }
 });
 
-// Drawing helpers
+// Drawing
 function getPos(e) {
   const rect = canvas.getBoundingClientRect();
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
