@@ -139,6 +139,22 @@ body {
   letter-spacing: 1px;
 }
 
+#x-link {
+  margin-top: 22px;
+  color: #c4a882;
+  text-decoration: none;
+  font-size: 0.95rem;
+  letter-spacing: 1px;
+  opacity: 0.85;
+  transition: opacity 0.2s, color 0.2s;
+  pointer-events: auto;
+}
+
+#x-link:hover {
+  opacity: 1;
+  color: #e8d5b7;
+}
+
 h2 {
   font-size: 1.8rem;
   margin-bottom: 10px;
