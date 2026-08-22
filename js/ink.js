@@ -1,18 +1,18 @@
-// Advanced Living Ink System for Atrament
+// Advanced Living Ink System + Absorb for Atrament
 
 class InkSystem {
   constructor() {
-    this.strokes = [];          // semua goresan tinta
-    this.platforms = [];        // platform solid yang bisa diinjak
-    this.particles = [];        // efek tetesan
+    this.strokes = [];
+    this.platforms = [];
+    this.particles = [];
 
     this.maxInk = 100;
     this.currentInk = 100;
-    this.inkRegen = 0.04;       // regenerasi pelan
+    this.inkRegen = 0.035;
 
     this.isDrawing = false;
     this.currentStroke = null;
-    this.minDistance = 6;       // supaya tidak terlalu banyak point
+    this.minDistance = 5;
   }
 
   startStroke(x, y) {
@@ -22,7 +22,7 @@ class InkSystem {
     this.currentStroke = {
       points: [{ x, y }],
       age: 0,
-      maxAge: 480,               // semakin kecil = semakin cepat menua
+      maxAge: 520,
       isAlive: false,
       hasSpawned: false
     };
@@ -37,38 +37,32 @@ class InkSystem {
 
     if (dist >= this.minDistance) {
       this.currentStroke.points.push({ x, y });
-      this.currentInk = Math.max(0, this.currentInk - 0.22);
+      this.currentInk = Math.max(0, this.currentInk - 0.18);
     }
   }
 
   endStroke() {
     if (!this.currentStroke) return;
-
-    // Setelah selesai digambar, buat platform solid dari stroke
     this.createPlatformsFromStroke(this.currentStroke);
-
     this.isDrawing = false;
     this.currentStroke = null;
   }
 
   createPlatformsFromStroke(stroke) {
-    // Ubah garis menjadi beberapa kotak platform kecil
     for (let i = 0; i < stroke.points.length - 1; i++) {
       const p1 = stroke.points[i];
       const p2 = stroke.points[i + 1];
 
       const midX = (p1.x + p2.x) / 2;
       const midY = (p1.y + p2.y) / 2;
-      const dx = p2.x - p1.x;
-      const dy = p2.y - p1.y;
-      const len = Math.hypot(dx, dy);
+      const len = Math.hypot(p2.x - p1.x, p2.y - p1.y);
 
-      // Platform agak tebal supaya enak diinjak
+      // Platform lebih tebal & stabil
       this.platforms.push({
-        x: midX - len / 2 - 4,
-        y: midY - 7,
-        width: len + 8,
-        height: 14,
+        x: midX - len / 2 - 6,
+        y: midY - 9,
+        width: Math.max(len + 12, 18),
+        height: 18,
         age: 0,
         maxAge: stroke.maxAge,
         isAlive: false,
@@ -77,81 +71,118 @@ class InkSystem {
     }
   }
 
-  update(enemies) {
-    // Regenerasi tinta pelan
-    if (this.currentInk < this.maxInk && !this.isDrawing) {
-      this.currentInk = Math.min(this.maxInk, this.currentInk + this.inkRegen);
-    }
+  // ===== ABSORB (Serap Tinta) =====
+  absorb(player) {
+    let absorbed = 0;
+    const range = 70;
 
-    // Update strokes & platforms
-    for (let stroke of this.strokes) {
-      stroke.age++;
+    // Serap platform di sekitar player
+    for (let i = this.platforms.length - 1; i >= 0; i--) {
+      const p = this.platforms[i];
+      const cx = p.x + p.width / 2;
+      const cy = p.y + p.height / 2;
+      const dist = Math.hypot(player.x + player.width/2 - cx, player.y + player.height/2 - cy);
 
-      if (stroke.age > stroke.maxAge && !stroke.isAlive) {
-        stroke.isAlive = true;
-      }
-
-      // Spawn enemy dari tinta yang sudah sangat tua
-      if (stroke.isAlive && !stroke.hasSpawned && stroke.age > stroke.maxAge + 90) {
-        if (stroke.points.length > 3) {
-          const mid = stroke.points[Math.floor(stroke.points.length / 2)];
-          enemies.push(new InkCreature(mid.x, mid.y - 10));
-          stroke.hasSpawned = true;
-        }
-      }
-    }
-
-    // Update platform age
-    for (let p of this.platforms) {
-      p.age++;
-      if (p.age > p.maxAge) {
-        p.isAlive = true;
-      }
-    }
-
-    // Hapus platform yang sudah terlalu tua (opsional)
-    this.platforms = this.platforms.filter(p => p.age < p.maxAge + 200);
-
-    // Particles (tetesan tinta)
-    this.updateParticles();
-  }
-
-  updateParticles() {
-    // Tambah particle dari tinta tua
-    if (Math.random() < 0.15) {
-      for (let stroke of this.strokes) {
-        if (stroke.age > stroke.maxAge * 0.6 && stroke.points.length > 2) {
-          const p = stroke.points[Math.floor(Math.random() * stroke.points.length)];
+      if (dist < range) {
+        this.platforms.splice(i, 1);
+        absorbed += 8;
+        // particle efek
+        for (let k = 0; k < 4; k++) {
           this.particles.push({
-            x: p.x + (Math.random() - 0.5) * 8,
-            y: p.y,
-            vy: 0.8 + Math.random() * 1.2,
-            life: 40 + Math.random() * 30,
-            maxLife: 70
+            x: cx + (Math.random()-0.5)*20,
+            y: cy,
+            vy: -1.5 - Math.random()*2,
+            life: 30 + Math.random()*20,
+            maxLife: 50,
+            absorb: true
           });
         }
       }
     }
 
-    // Update particles
+    // Serap stroke visual juga
+    for (let i = this.strokes.length - 1; i >= 0; i--) {
+      const s = this.strokes[i];
+      if (s.points.length === 0) continue;
+      const mid = s.points[Math.floor(s.points.length/2)];
+      const dist = Math.hypot(player.x + player.width/2 - mid.x, player.y + player.height/2 - mid.y);
+      if (dist < range) {
+        this.strokes.splice(i, 1);
+        absorbed += 5;
+      }
+    }
+
+    this.currentInk = Math.min(this.maxInk, this.currentInk + absorbed);
+    return absorbed > 0;
+  }
+
+  update(enemies) {
+    // Regen
+    if (this.currentInk < this.maxInk && !this.isDrawing) {
+      this.currentInk = Math.min(this.maxInk, this.currentInk + this.inkRegen);
+    }
+
+    // Aging
+    for (let stroke of this.strokes) {
+      stroke.age++;
+      if (stroke.age > stroke.maxAge && !stroke.isAlive) {
+        stroke.isAlive = true;
+      }
+
+      // Spawn enemy dari tinta tua
+      if (stroke.isAlive && !stroke.hasSpawned && stroke.age > stroke.maxAge + 110) {
+        if (stroke.points.length > 2) {
+          const mid = stroke.points[Math.floor(stroke.points.length / 2)];
+          enemies.push(new InkCreature(mid.x, mid.y - 12));
+          stroke.hasSpawned = true;
+        }
+      }
+    }
+
+    for (let p of this.platforms) {
+      p.age++;
+      if (p.age > p.maxAge) p.isAlive = true;
+    }
+
+    // Hapus platform yang sudah sangat tua
+    this.platforms = this.platforms.filter(p => p.age < p.maxAge + 180);
+
+    this.updateParticles();
+  }
+
+  updateParticles() {
+    if (Math.random() < 0.12) {
+      for (let stroke of this.strokes) {
+        if (stroke.age > stroke.maxAge * 0.55 && stroke.points.length > 2) {
+          const p = stroke.points[Math.floor(Math.random() * stroke.points.length)];
+          this.particles.push({
+            x: p.x + (Math.random()-0.5)*10,
+            y: p.y,
+            vy: 0.9 + Math.random()*1.4,
+            life: 35 + Math.random()*25,
+            maxLife: 60,
+            absorb: false
+          });
+        }
+      }
+    }
+
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const pt = this.particles[i];
       pt.y += pt.vy;
+      if (pt.absorb) pt.vy *= 0.95;
       pt.life--;
-      if (pt.life <= 0) {
-        this.particles.splice(i, 1);
-      }
+      if (pt.life <= 0) this.particles.splice(i, 1);
     }
   }
 
   draw(ctx) {
-    // Draw strokes
+    // Strokes
     for (let stroke of this.strokes) {
       if (stroke.points.length < 2) continue;
 
       ctx.beginPath();
       ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-
       for (let i = 1; i < stroke.points.length; i++) {
         ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
       }
@@ -159,14 +190,14 @@ class InkSystem {
       const progress = Math.min(1, stroke.age / stroke.maxAge);
 
       if (stroke.isAlive) {
-        ctx.strokeStyle = "#0a0a0a";
-        ctx.lineWidth = 9;
-        ctx.shadowColor = "rgba(0,0,0,0.6)";
-        ctx.shadowBlur = 8;
+        ctx.strokeStyle = "#080808";
+        ctx.lineWidth = 10;
+        ctx.shadowColor = "rgba(0,0,0,0.7)";
+        ctx.shadowBlur = 10;
       } else {
-        const dark = Math.floor(25 + progress * 50);
+        const dark = Math.floor(22 + progress * 55);
         ctx.strokeStyle = `rgb(${dark},${dark},${dark})`;
-        ctx.lineWidth = 6 + progress * 2;
+        ctx.lineWidth = 6 + progress * 2.5;
         ctx.shadowBlur = 0;
       }
 
@@ -176,19 +207,19 @@ class InkSystem {
       ctx.shadowBlur = 0;
     }
 
-    // Draw particles (tetesan)
+    // Particles
     for (let pt of this.particles) {
       const alpha = pt.life / pt.maxLife;
-      ctx.fillStyle = `rgba(15, 15, 15, ${alpha})`;
+      ctx.fillStyle = pt.absorb ? `rgba(180,160,130,${alpha})` : `rgba(12,12,12,${alpha})`;
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 2.2, 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, pt.absorb ? 3 : 2.3, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
   getPlatforms() {
-    // Hanya platform yang masih relatif segar yang solid
-    return this.platforms.filter(p => p.age < p.maxAge + 60);
+    // Platform masih solid cukup lama
+    return this.platforms.filter(p => p.age < p.maxAge + 80);
   }
 
   getInkPercentage() {
