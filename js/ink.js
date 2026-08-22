@@ -1,4 +1,4 @@
-// Living Ink System for Atrament
+// Improved Living Ink System for Atrament
 
 class InkSystem {
   constructor() {
@@ -8,7 +8,8 @@ class InkSystem {
 
     this.maxInk = 100;
     this.currentInk = 100;
-    this.inkRegen = 0.035;
+    this.inkRegen = 0.045;        // slightly faster regen
+    this.inkCost = 0.14;          // less expensive to draw
 
     this.isDrawing = false;
     this.currentStroke = null;
@@ -22,7 +23,7 @@ class InkSystem {
     this.currentStroke = {
       points: [{ x, y }],
       age: 0,
-      maxAge: 520,
+      maxAge: 580,                // lasts a bit longer
       isAlive: false,
       hasSpawned: false
     };
@@ -37,7 +38,7 @@ class InkSystem {
 
     if (dist >= this.minDistance) {
       this.currentStroke.points.push({ x, y });
-      this.currentInk = Math.max(0, this.currentInk - 0.18);
+      this.currentInk = Math.max(0, this.currentInk - this.inkCost);
     }
   }
 
@@ -58,22 +59,20 @@ class InkSystem {
       const len = Math.hypot(p2.x - p1.x, p2.y - p1.y);
 
       this.platforms.push({
-        x: midX - len / 2 - 6,
-        y: midY - 9,
-        width: Math.max(len + 12, 18),
-        height: 18,
+        x: midX - len / 2 - 7,
+        y: midY - 10,
+        width: Math.max(len + 14, 20),
+        height: 20,
         age: 0,
         maxAge: stroke.maxAge,
-        isAlive: false,
-        strokeRef: stroke
+        isAlive: false
       });
     }
   }
 
-  // Absorb ink around player
   absorb(player) {
     let absorbed = 0;
-    const range = 70;
+    const range = 75;
 
     for (let i = this.platforms.length - 1; i >= 0; i--) {
       const p = this.platforms[i];
@@ -83,14 +82,14 @@ class InkSystem {
 
       if (dist < range) {
         this.platforms.splice(i, 1);
-        absorbed += 8;
+        absorbed += 9;
 
-        for (let k = 0; k < 4; k++) {
+        for (let k = 0; k < 5; k++) {
           this.particles.push({
-            x: cx + (Math.random() - 0.5) * 20,
+            x: cx + (Math.random() - 0.5) * 22,
             y: cy,
-            vy: -1.5 - Math.random() * 2,
-            life: 30 + Math.random() * 20,
+            vy: -1.8 - Math.random() * 2.2,
+            life: 28 + Math.random() * 22,
             maxLife: 50,
             absorb: true
           });
@@ -105,7 +104,7 @@ class InkSystem {
       const dist = Math.hypot(player.x + player.width / 2 - mid.x, player.y + player.height / 2 - mid.y);
       if (dist < range) {
         this.strokes.splice(i, 1);
-        absorbed += 5;
+        absorbed += 6;
       }
     }
 
@@ -114,12 +113,10 @@ class InkSystem {
   }
 
   update(enemies) {
-    // Regen ink slowly
     if (this.currentInk < this.maxInk && !this.isDrawing) {
       this.currentInk = Math.min(this.maxInk, this.currentInk + this.inkRegen);
     }
 
-    // Aging
     for (let stroke of this.strokes) {
       stroke.age++;
 
@@ -127,11 +124,11 @@ class InkSystem {
         stroke.isAlive = true;
       }
 
-      // Spawn enemy from old ink
-      if (stroke.isAlive && !stroke.hasSpawned && stroke.age > stroke.maxAge + 110) {
-        if (stroke.points.length > 2) {
+      // Spawn enemy a bit later and less aggressively
+      if (stroke.isAlive && !stroke.hasSpawned && stroke.age > stroke.maxAge + 140) {
+        if (stroke.points.length > 2 && Math.random() < 0.7) {
           const mid = stroke.points[Math.floor(stroke.points.length / 2)];
-          enemies.push(new InkCreature(mid.x, mid.y - 12));
+          enemies.push(new InkCreature(mid.x, mid.y - 14));
           stroke.hasSpawned = true;
         }
       }
@@ -142,22 +139,20 @@ class InkSystem {
       if (p.age > p.maxAge) p.isAlive = true;
     }
 
-    // Remove very old platforms
-    this.platforms = this.platforms.filter(p => p.age < p.maxAge + 180);
-
+    this.platforms = this.platforms.filter(p => p.age < p.maxAge + 200);
     this.updateParticles();
   }
 
   updateParticles() {
-    if (Math.random() < 0.12) {
+    if (Math.random() < 0.14) {
       for (let stroke of this.strokes) {
-        if (stroke.age > stroke.maxAge * 0.55 && stroke.points.length > 2) {
+        if (stroke.age > stroke.maxAge * 0.5 && stroke.points.length > 2) {
           const p = stroke.points[Math.floor(Math.random() * stroke.points.length)];
           this.particles.push({
-            x: p.x + (Math.random() - 0.5) * 10,
+            x: p.x + (Math.random() - 0.5) * 12,
             y: p.y,
-            vy: 0.9 + Math.random() * 1.4,
-            life: 35 + Math.random() * 25,
+            vy: 0.8 + Math.random() * 1.5,
+            life: 30 + Math.random() * 30,
             maxLife: 60,
             absorb: false
           });
@@ -168,14 +163,13 @@ class InkSystem {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const pt = this.particles[i];
       pt.y += pt.vy;
-      if (pt.absorb) pt.vy *= 0.95;
+      if (pt.absorb) pt.vy *= 0.94;
       pt.life--;
       if (pt.life <= 0) this.particles.splice(i, 1);
     }
   }
 
   draw(ctx) {
-    // Draw strokes
     for (let stroke of this.strokes) {
       if (stroke.points.length < 2) continue;
 
@@ -188,14 +182,14 @@ class InkSystem {
       const progress = Math.min(1, stroke.age / stroke.maxAge);
 
       if (stroke.isAlive) {
-        ctx.strokeStyle = "#080808";
-        ctx.lineWidth = 10;
-        ctx.shadowColor = "rgba(0,0,0,0.7)";
-        ctx.shadowBlur = 10;
+        ctx.strokeStyle = "#060606";
+        ctx.lineWidth = 11;
+        ctx.shadowColor = "rgba(0,0,0,0.75)";
+        ctx.shadowBlur = 12;
       } else {
-        const dark = Math.floor(22 + progress * 55);
+        const dark = Math.floor(20 + progress * 60);
         ctx.strokeStyle = `rgb(${dark},${dark},${dark})`;
-        ctx.lineWidth = 6 + progress * 2.5;
+        ctx.lineWidth = 6.5 + progress * 3;
         ctx.shadowBlur = 0;
       }
 
@@ -208,15 +202,15 @@ class InkSystem {
     // Particles
     for (let pt of this.particles) {
       const alpha = pt.life / pt.maxLife;
-      ctx.fillStyle = pt.absorb ? `rgba(180,160,130,${alpha})` : `rgba(12,12,12,${alpha})`;
+      ctx.fillStyle = pt.absorb ? `rgba(200,180,140,${alpha})` : `rgba(10,10,10,${alpha})`;
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, pt.absorb ? 3 : 2.3, 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, pt.absorb ? 3.2 : 2.4, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
   getPlatforms() {
-    return this.platforms.filter(p => p.age < p.maxAge + 80);
+    return this.platforms.filter(p => p.age < p.maxAge + 90);
   }
 
   getInkPercentage() {
