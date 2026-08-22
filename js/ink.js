@@ -1,4 +1,4 @@
-// Advanced Living Ink System + Absorb for Atrament
+// Living Ink System for Atrament
 
 class InkSystem {
   constructor() {
@@ -57,7 +57,6 @@ class InkSystem {
       const midY = (p1.y + p2.y) / 2;
       const len = Math.hypot(p2.x - p1.x, p2.y - p1.y);
 
-      // Platform lebih tebal & stabil
       this.platforms.push({
         x: midX - len / 2 - 6,
         y: midY - 9,
@@ -71,28 +70,27 @@ class InkSystem {
     }
   }
 
-  // ===== ABSORB (Serap Tinta) =====
+  // Absorb ink around player
   absorb(player) {
     let absorbed = 0;
     const range = 70;
 
-    // Serap platform di sekitar player
     for (let i = this.platforms.length - 1; i >= 0; i--) {
       const p = this.platforms[i];
       const cx = p.x + p.width / 2;
       const cy = p.y + p.height / 2;
-      const dist = Math.hypot(player.x + player.width/2 - cx, player.y + player.height/2 - cy);
+      const dist = Math.hypot(player.x + player.width / 2 - cx, player.y + player.height / 2 - cy);
 
       if (dist < range) {
         this.platforms.splice(i, 1);
         absorbed += 8;
-        // particle efek
+
         for (let k = 0; k < 4; k++) {
           this.particles.push({
-            x: cx + (Math.random()-0.5)*20,
+            x: cx + (Math.random() - 0.5) * 20,
             y: cy,
-            vy: -1.5 - Math.random()*2,
-            life: 30 + Math.random()*20,
+            vy: -1.5 - Math.random() * 2,
+            life: 30 + Math.random() * 20,
             maxLife: 50,
             absorb: true
           });
@@ -100,12 +98,11 @@ class InkSystem {
       }
     }
 
-    // Serap stroke visual juga
     for (let i = this.strokes.length - 1; i >= 0; i--) {
       const s = this.strokes[i];
       if (s.points.length === 0) continue;
-      const mid = s.points[Math.floor(s.points.length/2)];
-      const dist = Math.hypot(player.x + player.width/2 - mid.x, player.y + player.height/2 - mid.y);
+      const mid = s.points[Math.floor(s.points.length / 2)];
+      const dist = Math.hypot(player.x + player.width / 2 - mid.x, player.y + player.height / 2 - mid.y);
       if (dist < range) {
         this.strokes.splice(i, 1);
         absorbed += 5;
@@ -117,7 +114,7 @@ class InkSystem {
   }
 
   update(enemies) {
-    // Regen
+    // Regen ink slowly
     if (this.currentInk < this.maxInk && !this.isDrawing) {
       this.currentInk = Math.min(this.maxInk, this.currentInk + this.inkRegen);
     }
@@ -125,11 +122,12 @@ class InkSystem {
     // Aging
     for (let stroke of this.strokes) {
       stroke.age++;
+
       if (stroke.age > stroke.maxAge && !stroke.isAlive) {
         stroke.isAlive = true;
       }
 
-      // Spawn enemy dari tinta tua
+      // Spawn enemy from old ink
       if (stroke.isAlive && !stroke.hasSpawned && stroke.age > stroke.maxAge + 110) {
         if (stroke.points.length > 2) {
           const mid = stroke.points[Math.floor(stroke.points.length / 2)];
@@ -144,7 +142,7 @@ class InkSystem {
       if (p.age > p.maxAge) p.isAlive = true;
     }
 
-    // Hapus platform yang sudah sangat tua
+    // Remove very old platforms
     this.platforms = this.platforms.filter(p => p.age < p.maxAge + 180);
 
     this.updateParticles();
@@ -156,10 +154,10 @@ class InkSystem {
         if (stroke.age > stroke.maxAge * 0.55 && stroke.points.length > 2) {
           const p = stroke.points[Math.floor(Math.random() * stroke.points.length)];
           this.particles.push({
-            x: p.x + (Math.random()-0.5)*10,
+            x: p.x + (Math.random() - 0.5) * 10,
             y: p.y,
-            vy: 0.9 + Math.random()*1.4,
-            life: 35 + Math.random()*25,
+            vy: 0.9 + Math.random() * 1.4,
+            life: 35 + Math.random() * 25,
             maxLife: 60,
             absorb: false
           });
@@ -177,7 +175,7 @@ class InkSystem {
   }
 
   draw(ctx) {
-    // Strokes
+    // Draw strokes
     for (let stroke of this.strokes) {
       if (stroke.points.length < 2) continue;
 
@@ -218,7 +216,6 @@ class InkSystem {
   }
 
   getPlatforms() {
-    // Platform masih solid cukup lama
     return this.platforms.filter(p => p.age < p.maxAge + 80);
   }
 
