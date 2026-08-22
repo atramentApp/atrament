@@ -4,121 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Atrament</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    body {
-      background: #1a120b;
-      overflow: hidden;
-      font-family: Georgia, serif;
-      color: #e8d5b7;
-    }
-
-    #game-container {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    #gameCanvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      background: #2a2118;
-    }
-
-    #ui {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      pointer-events: none;
-      z-index: 5;
-    }
-
-    #ink-meter {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      width: 180px;
-      height: 14px;
-      background: #3a2f24;
-      border: 2px solid #6b5344;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    #ink-bar {
-      height: 100%;
-      width: 100%;
-      background: #1a1a1a;
-      transition: width 0.2s ease;
-    }
-
-    #depth {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      font-size: 16px;
-      letter-spacing: 1px;
-    }
-
-    .screen {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background: rgba(20, 14, 8, 0.92);
-      z-index: 10;
-    }
-
-    .screen.hidden {
-      display: none;
-    }
-
-    h1 {
-      font-size: 3.2rem;
-      margin-bottom: 40px;
-      letter-spacing: 8px;
-      text-shadow: 0 0 25px rgba(0, 0, 0, 0.8);
-    }
-
-    h2 {
-      font-size: 2rem;
-      margin-bottom: 30px;
-      letter-spacing: 3px;
-    }
-
-    button {
-      padding: 14px 42px;
-      font-size: 1.1rem;
-      background: #2a2118;
-      color: #e8d5b7;
-      border: 2px solid #6b5344;
-      cursor: pointer;
-      letter-spacing: 2px;
-      font-family: Georgia, serif;
-    }
-
-    button:active {
-      background: #3a2f24;
-      transform: scale(0.97);
-    }
-  </style>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <div id="game-container">
     <canvas id="gameCanvas"></canvas>
 
+    <!-- UI -->
     <div id="ui">
       <div id="ink-meter">
         <div id="ink-bar"></div>
@@ -126,234 +18,24 @@
       <div id="depth">Depth 1</div>
     </div>
 
+    <!-- Menu -->
     <div id="menu" class="screen">
       <h1>Atrament</h1>
       <button id="start-btn">Begin Writing</button>
     </div>
 
+    <!-- Game Over -->
     <div id="gameover" class="screen hidden">
       <h2>The Page is Lost</h2>
       <button id="retry-btn">Rewrite</button>
     </div>
   </div>
 
-  <script>
-    class Player {
-      constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.width = 28;
-        this.height = 40;
-        this.velocityX = 0;
-        this.velocityY = 0;
-        this.speed = 4.5;
-        this.jumpForce = -11;
-        this.onGround = false;
-      }
-
-      update(canvas) {
-        this.velocityY += 0.45;
-        this.x += this.velocityX;
-        this.y += this.velocityY;
-
-        if (this.y + this.height > canvas.height - 80) {
-          this.y = canvas.height - 80 - this.height;
-          this.velocityY = 0;
-          this.onGround = true;
-        } else {
-          this.onGround = false;
-        }
-
-        if (this.x < 0) this.x = 0;
-        if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
-      }
-
-      draw(ctx) {
-        ctx.fillStyle = "#1a1a1a";
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-        ctx.beginPath();
-        ctx.arc(this.x + this.width / 2, this.y + 10, 14, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      jump() {
-        if (this.onGround) {
-          this.velocityY = this.jumpForce;
-          this.onGround = false;
-        }
-      }
-    }
-
-    class InkSystem {
-      constructor() {
-        this.strokes = [];
-        this.maxInk = 100;
-        this.currentInk = 100;
-        this.isDrawing = false;
-        this.currentStroke = null;
-      }
-
-      startStroke(x, y) {
-        if (this.currentInk <= 0) return;
-        this.isDrawing = true;
-        this.currentStroke = {
-          points: [{ x, y }],
-          age: 0,
-          maxAge: 600,
-          isAlive: false
-        };
-        this.strokes.push(this.currentStroke);
-      }
-
-      addPoint(x, y) {
-        if (!this.isDrawing || !this.currentStroke) return;
-        this.currentStroke.points.push({ x, y });
-        this.currentInk = Math.max(0, this.currentInk - 0.15);
-      }
-
-      endStroke() {
-        this.isDrawing = false;
-        this.currentStroke = null;
-      }
-
-      update() {
-        for (let stroke of this.strokes) {
-          stroke.age++;
-          if (stroke.age > stroke.maxAge && !stroke.isAlive) {
-            stroke.isAlive = true;
-          }
-        }
-      }
-
-      draw(ctx) {
-        for (let stroke of this.strokes) {
-          if (stroke.points.length < 2) continue;
-          ctx.beginPath();
-          ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-          for (let i = 1; i < stroke.points.length; i++) {
-            ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-          }
-          if (stroke.isAlive) {
-            ctx.strokeStyle = "#0a0a0a";
-            ctx.lineWidth = 8;
-          } else {
-            const progress = stroke.age / stroke.maxAge;
-            const darkness = Math.floor(30 + progress * 40);
-            ctx.strokeStyle = `rgb(\( {darkness}, \){darkness},${darkness})`;
-            ctx.lineWidth = 6;
-          }
-          ctx.lineCap = "round";
-          ctx.lineJoin = "round";
-          ctx.stroke();
-        }
-      }
-
-      getInkPercentage() {
-        return (this.currentInk / this.maxInk) * 100;
-      }
-    }
-
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    let gameState = 'menu';
-    let player, inkSystem;
-
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
-
-    function initGame() {
-      player = new Player(100, canvas.height - 150);
-      inkSystem = new InkSystem();
-    }
-
-    function gameLoop() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#2a2118';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      if (gameState === 'playing') {
-        player.update(canvas);
-        inkSystem.update();
-        inkSystem.draw(ctx);
-        player.draw(ctx);
-
-        const inkBar = document.getElementById('ink-bar');
-        if (inkBar) inkBar.style.width = inkSystem.getInkPercentage() + '%';
-      }
-
-      requestAnimationFrame(gameLoop);
-    }
-    gameLoop();
-
-    document.getElementById('start-btn').addEventListener('click', () => {
-      document.getElementById('menu').classList.add('hidden');
-      gameState = 'playing';
-      initGame();
-    });
-
-    document.getElementById('retry-btn').addEventListener('click', () => {
-      document.getElementById('gameover').classList.add('hidden');
-      gameState = 'playing';
-      initGame();
-    });
-
-    window.addEventListener('keydown', (e) => {
-      if (gameState !== 'playing') return;
-      if (e.key === 'ArrowLeft' || e.key === 'a') player.velocityX = -player.speed;
-      if (e.key === 'ArrowRight' || e.key === 'd') player.velocityX = player.speed;
-      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') player.jump();
-    });
-
-    window.addEventListener('keyup', (e) => {
-      if (['ArrowLeft','a','ArrowRight','d'].includes(e.key)) {
-        player.velocityX = 0;
-      }
-    });
-
-    function getPos(e) {
-      const rect = canvas.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      return {
-        x: clientX - rect.left,
-        y: clientY - rect.top
-      };
-    }
-
-    canvas.addEventListener('mousedown', (e) => {
-      if (gameState !== 'playing') return;
-      const pos = getPos(e);
-      inkSystem.startStroke(pos.x, pos.y);
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
-      if (gameState !== 'playing') return;
-      const pos = getPos(e);
-      inkSystem.addPoint(pos.x, pos.y);
-    });
-
-    canvas.addEventListener('mouseup', () => inkSystem.endStroke());
-    canvas.addEventListener('mouseleave', () => inkSystem.endStroke());
-
-    canvas.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      if (gameState !== 'playing') return;
-      const pos = getPos(e);
-      inkSystem.startStroke(pos.x, pos.y);
-    }, { passive: false });
-
-    canvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      if (gameState !== 'playing') return;
-      const pos = getPos(e);
-      inkSystem.addPoint(pos.x, pos.y);
-    }, { passive: false });
-
-    canvas.addEventListener('touchend', () => inkSystem.endStroke());
-  </script>
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/ink.js"></script>
+  <script src="js/enemy.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
