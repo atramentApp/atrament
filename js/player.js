@@ -1,4 +1,4 @@
-// Advanced Player for Atrament
+// Player character for Atrament
 
 class Player {
   constructor(x, y) {
@@ -18,13 +18,13 @@ class Player {
     this.onGround = false;
     this.wasOnGround = false;
 
-    // Coyote time & jump buffer (bikin lompatan terasa enak)
+    // Coyote time & jump buffer
     this.coyoteTime = 0;
     this.coyoteMax = 8;
     this.jumpBuffer = 0;
     this.jumpBufferMax = 8;
 
-    this.facing = 1; // 1 = kanan, -1 = kiri
+    this.facing = 1;
     this.color = "#121212";
   }
 
@@ -37,16 +37,13 @@ class Player {
       this.velocityY = this.maxFallSpeed;
     }
 
-    // Horizontal movement
+    // Apply movement
     this.x += this.velocityX;
-
-    // Vertical movement
     this.y += this.velocityY;
 
-    // Reset ground
     this.onGround = false;
 
-    // Collision dengan platform (termasuk tinta)
+    // Collision with platforms
     this.handleCollisions(platforms);
 
     // Coyote time
@@ -64,23 +61,28 @@ class Player {
       }
     }
 
-    // Facing direction
+    // Facing
     if (this.velocityX > 0.3) this.facing = 1;
     if (this.velocityX < -0.3) this.facing = -1;
+
+    // Keep inside screen
+    if (this.x < 0) this.x = 0;
+    if (this.x + this.width > canvas.width) {
+      this.x = canvas.width - this.width;
+    }
   }
 
   handleCollisions(platforms) {
-    // Simple AABB + platform check
     for (let p of platforms) {
       if (this.intersects(p)) {
-        // Landing from above
-        if (this.velocityY > 0 && this.y + this.height - this.velocityY <= p.y + 8) {
+        // Land on top
+        if (this.velocityY > 0 && this.y + this.height - this.velocityY <= p.y + 10) {
           this.y = p.y - this.height;
           this.velocityY = 0;
           this.onGround = true;
         }
-        // Hitting ceiling
-        else if (this.velocityY < 0 && this.y - this.velocityY >= p.y + p.height - 8) {
+        // Hit ceiling
+        else if (this.velocityY < 0 && this.y - this.velocityY >= p.y + p.height - 10) {
           this.y = p.y + p.height;
           this.velocityY = 0;
         }
@@ -95,16 +97,6 @@ class Player {
         }
       }
     }
-
-    // Temporary floor (akan diganti nanti)
-    if (this.y + this.height > 580) {
-      this.y = 580 - this.height;
-      this.velocityY = 0;
-      this.onGround = true;
-    }
-
-    // Screen bounds
-    if (this.x < 0) this.x = 0;
   }
 
   intersects(rect) {
@@ -135,12 +127,12 @@ class Player {
     ctx.fillStyle = this.color;
     ctx.fillRect(this.x, this.y, this.width, this.height);
 
-    // Hood (lebih bagus)
+    // Hood
     ctx.beginPath();
     ctx.arc(this.x + this.width / 2, this.y + 11, 13, Math.PI, 0);
     ctx.fill();
 
-    // Small eye glow
+    // Eye
     ctx.fillStyle = "#e8d5b7";
     const eyeX = this.facing === 1 ? this.x + 17 : this.x + 7;
     ctx.beginPath();
