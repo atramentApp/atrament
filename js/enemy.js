@@ -1,4 +1,4 @@
-// Advanced Ink Creatures for Atrament
+// Ink Creatures for Atrament
 
 class InkCreature {
   constructor(x, y) {
@@ -8,7 +8,6 @@ class InkCreature {
     this.speed = 1.1 + Math.random() * 1.1;
     this.alive = true;
     this.pulse = Math.random() * Math.PI * 2;
-    this.health = 1;
     this.wobble = Math.random() * 100;
   }
 
@@ -16,7 +15,6 @@ class InkCreature {
     this.pulse += 0.09;
     this.wobble += 0.05;
 
-    // Mengejar player dengan sedikit gerakan organic
     const dx = player.x + player.width / 2 - this.x;
     const dy = player.y + player.height / 2 - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -26,7 +24,6 @@ class InkCreature {
       this.y += (dy / dist) * this.speed + Math.sin(this.wobble) * 0.4;
     }
 
-    // Batas bawah
     if (this.y > canvasHeight - 40) {
       this.y = canvasHeight - 40;
     }
@@ -47,24 +44,22 @@ class InkCreature {
     ctx.fillStyle = "#0b0b0b";
     ctx.fill();
 
-    // Outer glow
+    // Outer ring
     ctx.beginPath();
     ctx.arc(this.x, this.y, size + 3, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(20,20,20,0.5)";
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    // Glowing eyes
+    // Eyes
     const eyeOffset = size * 0.35;
     ctx.fillStyle = "#e8d5b7";
-    
     ctx.beginPath();
     ctx.arc(this.x - eyeOffset, this.y - 3, 2.8, 0, Math.PI * 2);
     ctx.arc(this.x + eyeOffset, this.y - 3, 2.8, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Cek collision dengan player
   hits(player) {
     const px = player.x + player.width / 2;
     const py = player.y + player.height / 2;
