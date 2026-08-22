@@ -1,4 +1,4 @@
-// Atrament - Main Game File
+// Atrament - Main Game (Visual + Juice + Sound)
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -10,8 +10,80 @@ let enemies = [];
 let depth = 1;
 let bestDepth = parseInt(localStorage.getItem('atrament_best') || '1');
 let gameTime = 0;
-let safeTime = 200;
+let safeTime = 220;
 let tutorialTimer = 0;
+
+// Screen shake
+let shakeTime = 0;
+let shakeIntensity = 0;
+
+// Audio Context
+let audioCtx = null;
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+
+function playSound(type) {
+  if (!audioCtx) return;
+
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  const now = audioCtx.currentTime;
+
+  if (type === 'jump') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(320, now);
+    osc.frequency.exponentialRampToValueAtTime(180, now + 0.12);
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc.start(now);
+    osc.stop(now + 0.13);
+  }
+
+  if (type === 'absorb') {
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(90, now + 0.2);
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    osc.start(now);
+    osc.stop(now + 0.21);
+  }
+
+  if (type === 'draw') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(120 + Math.random() * 40, now);
+    gain.gain.setValueAtTime(0.04, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    osc.start(now);
+    osc.stop(now + 0.07);
+  }
+
+  if (type === 'death') {
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200, now);
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.4);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    osc.start(now);
+    osc.stop(now + 0.41);
+  }
+
+  if (type === 'land') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(90, now);
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    osc.start(now);
+    osc.stop(now + 0.09);
+  }
+}
 
 // Joystick
 let joystick = {
@@ -30,7 +102,6 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// Show best depth
 document.getElementById('best-depth').textContent = `Best: ${bestDepth}`;
 
 function initGame() {
@@ -39,8 +110,9 @@ function initGame() {
   enemies = [];
   depth = 1;
   gameTime = 0;
-  safeTime = 200;
-  tutorialTimer = 360;
+  safeTime = 220;
+  tutorialTimer = 380;
+  shakeTime = 0;
 
   createStartingGround();
   document.getElementById('depth').textContent = `Depth ${depth}`;
@@ -50,7 +122,6 @@ function initGame() {
 function createStartingGround() {
   const groundY = canvas.height - 65;
 
-  // Main ground
   inkSystem.platforms.push({
     x: -50,
     y: groundY,
@@ -61,7 +132,6 @@ function createStartingGround() {
     isAlive: false
   });
 
-  // Starting platform
   inkSystem.platforms.push({
     x: 90,
     y: canvas.height - 170,
@@ -73,15 +143,29 @@ function createStartingGround() {
   });
 }
 
+function triggerShake(intensity = 6, duration = 12) {
+  shakeIntensity = intensity;
+  shakeTime = duration;
+}
+
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Screen shake
+  ctx.save();
+  if (shakeTime > 0) {
+    const dx = (Math.random() - 0.5) * shakeIntensity;
+    const dy = (Math.random() - 0.5) * shakeIntensity;
+    ctx.translate(dx, dy);
+    shakeTime--;
+  }
+
   drawBackground();
 
   if (gameState === 'playing') {
     gameTime++;
     if (safeTime > 0) safeTime--;
 
-    // Tutorial
     if (tutorialTimer > 0) {
       tutorialTimer--;
       if (tutorialTimer <= 0) {
@@ -90,14 +174,23 @@ function gameLoop() {
     }
 
     const platforms = inkSystem.getPlatforms();
+    const wasOnGround = player.onGround;
+
     player.update(platforms);
     inkSystem.update(enemies);
+
+    // Land sound
+    if (!wasOnGround && player.onGround) {
+      playSound('land');
+    }
 
     // Enemies
     for (let i = enemies.length - 1; i >= 0; i--) {
       const e = enemies[i];
       e.update(player, canvas.height);
       if (safeTime <= 0 && e.hits(player)) {
+        playSound('death');
+        triggerShake(10, 18);
         gameOver();
       }
     }
@@ -109,27 +202,23 @@ function gameLoop() {
 
     // UI
     const inkFill = document.getElementById('ink-fill');
-    if (inkFill) {
-      inkFill.style.width = inkSystem.getInkPercentage() + '%';
-    }
+    if (inkFill) inkFill.style.width = inkSystem.getInkPercentage() + '%';
 
-    // Depth increase
-    if (gameTime > 0 && gameTime % 960 === 0) {
+    if (gameTime > 0 && gameTime % 1000 === 0) {
       depth++;
       document.getElementById('depth').textContent = `Depth ${depth}`;
     }
 
-    // Joystick movement
     if (joystick.active) {
       player.velocityX = joystick.dx * player.speed;
     }
   }
 
+  ctx.restore();
   requestAnimationFrame(gameLoop);
 }
 
 function drawBackground() {
-  // Lighter background so character is visible
   const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
   g.addColorStop(0, '#3a2f24');
   g.addColorStop(0.5, '#2e251c');
@@ -137,7 +226,6 @@ function drawBackground() {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Paper lines
   ctx.strokeStyle = 'rgba(90, 70, 50, 0.09)';
   ctx.lineWidth = 1;
   for (let i = 0; i < canvas.height; i += 24) {
@@ -160,13 +248,9 @@ function gameOver() {
   }
 
   document.getElementById('final-depth').textContent = `Depth reached: ${depth}`;
-  
   const newBestEl = document.getElementById('new-best');
-  if (isNewBest) {
-    newBestEl.classList.remove('hidden');
-  } else {
-    newBestEl.classList.add('hidden');
-  }
+  if (isNewBest) newBestEl.classList.remove('hidden');
+  else newBestEl.classList.add('hidden');
 
   document.getElementById('gameover').classList.remove('hidden');
   document.getElementById('tutorial').classList.add('hidden');
@@ -174,12 +258,14 @@ function gameOver() {
 
 // Buttons
 document.getElementById('start-btn').addEventListener('click', () => {
+  initAudio();
   document.getElementById('menu').classList.add('hidden');
   gameState = 'playing';
   initGame();
 });
 
 document.getElementById('retry-btn').addEventListener('click', () => {
+  initAudio();
   document.getElementById('gameover').classList.add('hidden');
   gameState = 'playing';
   initGame();
@@ -191,9 +277,12 @@ window.addEventListener('keydown', (e) => {
 
   if (e.key === 'ArrowLeft' || e.key === 'a') player.velocityX = -player.speed;
   if (e.key === 'ArrowRight' || e.key === 'd') player.velocityX = player.speed;
-  if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') player.jump();
+  if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') {
+    player.jump();
+    playSound('jump');
+  }
   if (e.key === 'e' || e.key === 'E') {
-    inkSystem.absorb(player);
+    if (inkSystem.absorb(player)) playSound('absorb');
   }
 });
 
@@ -204,7 +293,7 @@ window.addEventListener('keyup', (e) => {
   }
 });
 
-// Mouse & Touch drawing
+// Drawing helpers
 function getPos(e) {
   const rect = canvas.getBoundingClientRect();
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -217,8 +306,10 @@ function getPos(e) {
 
 canvas.addEventListener('mousedown', (e) => {
   if (gameState !== 'playing' || !inkSystem) return;
+  initAudio();
   const pos = getPos(e);
   inkSystem.startStroke(pos.x, pos.y);
+  playSound('draw');
 });
 
 canvas.addEventListener('mousemove', (e) => {
@@ -240,8 +331,10 @@ canvas.addEventListener('touchstart', (e) => {
   if (e.target.closest('#mobile-controls')) return;
   e.preventDefault();
   if (gameState !== 'playing' || !inkSystem) return;
+  initAudio();
   const pos = getPos(e);
   inkSystem.startStroke(pos.x, pos.y);
+  playSound('draw');
 }, { passive: false });
 
 canvas.addEventListener('touchmove', (e) => {
@@ -298,18 +391,21 @@ joystickZone.addEventListener('touchmove', handleJoystickMove, { passive: false 
 joystickZone.addEventListener('touchend', handleJoystickEnd);
 joystickZone.addEventListener('touchcancel', handleJoystickEnd);
 
-// Jump & Absorb buttons
+// Jump & Absorb
 document.getElementById('jump-btn').addEventListener('touchstart', (e) => {
   e.preventDefault();
-  if (gameState === 'playing' && player) player.jump();
+  if (gameState === 'playing' && player) {
+    player.jump();
+    playSound('jump');
+  }
 }, { passive: false });
 
 document.getElementById('absorb-btn').addEventListener('touchstart', (e) => {
   e.preventDefault();
   if (gameState === 'playing' && inkSystem && player) {
-    inkSystem.absorb(player);
+    if (inkSystem.absorb(player)) playSound('absorb');
   }
 }, { passive: false });
 
-// Start the game loop
+// Start
 gameLoop();
