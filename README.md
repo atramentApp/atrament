@@ -1,2 +1,11 @@
-# atrament
-Browser platformer where ink is both your tool and your enemy. Draw platforms that can come alive.
+# Atrament
+
+A living ink platformer.
+
+Draw your path. The ink remembers. The page bleeds.
+
+---
+
+**Status:** In development  
+**Platform:** Browser (Desktop & Mobile)  
+**Ticker:** $ATRA
