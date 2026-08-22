@@ -1,4 +1,4 @@
-// Atrament - Full Advanced Version
+// Atrament - Main Game File
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -30,7 +30,7 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// Tampilkan best depth di UI
+// Show best depth
 document.getElementById('best-depth').textContent = `Best: ${bestDepth}`;
 
 function initGame() {
@@ -40,7 +40,7 @@ function initGame() {
   depth = 1;
   gameTime = 0;
   safeTime = 200;
-  tutorialTimer = 360; // tampil 6 detik
+  tutorialTimer = 360;
 
   createStartingGround();
   document.getElementById('depth').textContent = `Depth ${depth}`;
@@ -49,7 +49,8 @@ function initGame() {
 
 function createStartingGround() {
   const groundY = canvas.height - 65;
-  // Tanah utama
+
+  // Main ground
   inkSystem.platforms.push({
     x: -50,
     y: groundY,
@@ -59,7 +60,8 @@ function createStartingGround() {
     maxAge: 999999,
     isAlive: false
   });
-  // Platform awal
+
+  // Starting platform
   inkSystem.platforms.push({
     x: 90,
     y: canvas.height - 170,
@@ -79,7 +81,7 @@ function gameLoop() {
     gameTime++;
     if (safeTime > 0) safeTime--;
 
-    // Tutorial timer
+    // Tutorial
     if (tutorialTimer > 0) {
       tutorialTimer--;
       if (tutorialTimer <= 0) {
@@ -107,15 +109,17 @@ function gameLoop() {
 
     // UI
     const inkFill = document.getElementById('ink-fill');
-    if (inkFill) inkFill.style.width = inkSystem.getInkPercentage() + '%';
+    if (inkFill) {
+      inkFill.style.width = inkSystem.getInkPercentage() + '%';
+    }
 
-    // Depth naik tiap ~16 detik
+    // Depth increase
     if (gameTime > 0 && gameTime % 960 === 0) {
       depth++;
       document.getElementById('depth').textContent = `Depth ${depth}`;
     }
 
-    // Joystick
+    // Joystick movement
     if (joystick.active) {
       player.velocityX = joystick.dx * player.speed;
     }
@@ -125,13 +129,16 @@ function gameLoop() {
 }
 
 function drawBackground() {
+  // Lighter background so character is visible
   const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  g.addColorStop(0, '#2c241c');
-  g.addColorStop(1, '#18120c');
+  g.addColorStop(0, '#3a2f24');
+  g.addColorStop(0.5, '#2e251c');
+  g.addColorStop(1, '#241c15');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.strokeStyle = 'rgba(70, 50, 35, 0.06)';
+  // Paper lines
+  ctx.strokeStyle = 'rgba(90, 70, 50, 0.09)';
   ctx.lineWidth = 1;
   for (let i = 0; i < canvas.height; i += 24) {
     ctx.beginPath();
@@ -144,7 +151,6 @@ function drawBackground() {
 function gameOver() {
   gameState = 'gameover';
 
-  // High Score
   let isNewBest = false;
   if (depth > bestDepth) {
     bestDepth = depth;
@@ -154,6 +160,7 @@ function gameOver() {
   }
 
   document.getElementById('final-depth').textContent = `Depth reached: ${depth}`;
+  
   const newBestEl = document.getElementById('new-best');
   if (isNewBest) {
     newBestEl.classList.remove('hidden');
@@ -165,7 +172,7 @@ function gameOver() {
   document.getElementById('tutorial').classList.add('hidden');
 }
 
-// ===== Buttons =====
+// Buttons
 document.getElementById('start-btn').addEventListener('click', () => {
   document.getElementById('menu').classList.add('hidden');
   gameState = 'playing';
@@ -178,9 +185,10 @@ document.getElementById('retry-btn').addEventListener('click', () => {
   initGame();
 });
 
-// ===== Keyboard =====
+// Keyboard
 window.addEventListener('keydown', (e) => {
   if (gameState !== 'playing' || !player) return;
+
   if (e.key === 'ArrowLeft' || e.key === 'a') player.velocityX = -player.speed;
   if (e.key === 'ArrowRight' || e.key === 'd') player.velocityX = player.speed;
   if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') player.jump();
@@ -196,7 +204,7 @@ window.addEventListener('keyup', (e) => {
   }
 });
 
-// ===== Drawing =====
+// Mouse & Touch drawing
 function getPos(e) {
   const rect = canvas.getBoundingClientRect();
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -248,7 +256,7 @@ canvas.addEventListener('touchend', () => {
   if (inkSystem) inkSystem.endStroke();
 });
 
-// ===== Joystick =====
+// Joystick
 const joystickZone = document.getElementById('joystick-zone');
 
 function handleJoystickStart(e) {
@@ -303,5 +311,5 @@ document.getElementById('absorb-btn').addEventListener('touchstart', (e) => {
   }
 }, { passive: false });
 
-// Start
+// Start the game loop
 gameLoop();
